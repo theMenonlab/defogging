@@ -1,0 +1,3 @@
+filename,role,sha256,size_bytes,release_location
+fog_chamber_nafnet_model_state_20260615.pth,fog-chamber NAFNet,6f430b315e5de74a520ca8a5c3b76314718752b6f29d5c4cd61286a8d52e746a,116929846,GitHub Release asset
+synthetic_finetuned_nafnet_model_state_20260615.pt,synthetic fine-tuned NAFNet,ef3dcb6502ff0b51cc9a12953a10fce13b38a0ce927704297bd67c2fcab362ac,116930432,GitHub Release asset

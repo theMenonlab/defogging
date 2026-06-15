@@ -1,0 +1,9 @@
+metric,column,spearman_rho,category_centered_spearman_rho
+Foggy dark-channel q90,fog_dark_channel_q90,0.3987009295323032,0.3118379260687783
+Foggy dark-channel q95,fog_dark_channel_q95,0.382344090015746,0.3147742846424134
+Foggy luminance q75,fog_luminance_q75,0.3520487890762291,0.3076647876094595
+fog luminance q90,fog_luminance_q90,0.3319093994192911,0.2939560247476908
+fog dark channel haze index,fog_dark_channel_haze_index,0.3311805123420968,0.2115415595714087
+dcp t q10,dcp_t_q10,-0.3245021662588846,-0.1818234680922436
+fog luminance q95,fog_luminance_q95,0.3234383840411169,0.2918441938832567
+fog dark channel q50,fog_dark_channel_q50,0.3145485444848132,0.2170723492643817

@@ -1,0 +1,13 @@
+category,split,n
+apparel,train,825
+apparel,test,92
+artwork,train,823
+artwork,test,92
+cars,train,825
+cars,test,92
+dishes,train,823
+dishes,test,92
+furniture,train,824
+furniture,test,92
+illustrations,train,823
+illustrations,test,92

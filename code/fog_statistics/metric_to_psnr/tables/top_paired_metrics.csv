@@ -1,0 +1,13 @@
+metric,column,spearman_rho,category_centered_spearman_rho
+"Laplacian mean abs ratio, step 1",laplacian_step1_mean_abs_ratio,0.631908634052632,0.5904893988715169
+"Laplacian mean abs ratio, step 2",laplacian_step2_mean_abs_ratio,0.6019114978534336,0.5853573879282876
+Laplacian variance ratio,laplacian_variance_ratio,0.5816905243009979,0.4900887806786622
+laplacian step1 variance ratio,laplacian_step1_variance_ratio,0.57681885239925,0.4876068913292474
+"Gradient mean abs ratio, step 1",gradient_step1_mean_abs_ratio,0.567287689552007,0.5639580752119419
+Gradient magnitude ratio,gradient_ratio_recomputed,0.5449709474757244,0.5459300424975482
+log sigma1p0 mean abs ratio,log_sigma1p0_mean_abs_ratio,0.5432174937562151,0.5358679278424935
+laplacian step3 mean abs ratio,laplacian_step3_mean_abs_ratio,0.541728160379694,0.5340187287150181
+gradient step2 mean abs ratio,gradient_step2_mean_abs_ratio,0.5359105923387407,0.5378783673738461
+gaussian gradient sigma0p5 mean ratio,gaussian_gradient_sigma0p5_mean_ratio,0.5281753336713199,0.5320758531936087
+gradient step1 energy ratio,gradient_step1_energy_ratio,0.5083342025570445,0.4669470014207705
+gradient step3 mean abs ratio,gradient_step3_mean_abs_ratio,0.5083152247041988,0.5126854817570752

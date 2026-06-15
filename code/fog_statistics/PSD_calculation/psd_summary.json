@@ -1,0 +1,74 @@
+{
+  "analysis": "paired image-domain radial PSD ratio",
+  "claim_boundary": "Ratios compare foggy chamber captures with displayed archive images. They measure end-to-end image degradation, not physical fog transmission.",
+  "fog_root": "VerticalFilter_MediumFog_Redo_3-21-26_aligned",
+  "archive_root": "./fog_imager_3/archive",
+  "image_size": 512,
+  "radial_bins": 96,
+  "all_pairs": 5495,
+  "held_out_pairs": 552,
+  "split_rule": "within each category, sorted by stem; zero-based index modulo 10 equals 0 is held out",
+  "low_band_cycles_per_pixel": [
+    0.01,
+    0.05
+  ],
+  "high_band_cycles_per_pixel": [
+    0.15,
+    0.24
+  ],
+  "low_band_median_pair_ratio": 0.03215581069481982,
+  "low_band_median_pair_ratio_ci95": [
+    0.029385196658691545,
+    0.0372468107789723
+  ],
+  "high_band_median_pair_ratio": 0.0035981513380051273,
+  "high_band_median_pair_ratio_ci95": [
+    0.0032610668080489437,
+    0.004137002921728911
+  ],
+  "low_over_high_relative_suppression": 8.936758817000598,
+  "category_summary": [
+    {
+      "category": "apparel",
+      "n": 92,
+      "low_band_ratio_median": 0.024649174169428023,
+      "high_band_ratio_median": 0.002804635826563449,
+      "low_over_high_relative_suppression": 8.78872541524613
+    },
+    {
+      "category": "artwork",
+      "n": 92,
+      "low_band_ratio_median": 0.03548010923737786,
+      "high_band_ratio_median": 0.003282110408716012,
+      "low_over_high_relative_suppression": 10.810151036709934
+    },
+    {
+      "category": "cars",
+      "n": 92,
+      "low_band_ratio_median": 0.041530895432314585,
+      "high_band_ratio_median": 0.004621223531814768,
+      "low_over_high_relative_suppression": 8.98699124731698
+    },
+    {
+      "category": "dishes",
+      "n": 92,
+      "low_band_ratio_median": 0.03549368408750726,
+      "high_band_ratio_median": 0.0034590869918403513,
+      "low_over_high_relative_suppression": 10.260997821457917
+    },
+    {
+      "category": "furniture",
+      "n": 92,
+      "low_band_ratio_median": 0.029524000974804825,
+      "high_band_ratio_median": 0.004701770711024643,
+      "low_over_high_relative_suppression": 6.279336613667141
+    },
+    {
+      "category": "illustrations",
+      "n": 92,
+      "low_band_ratio_median": 0.03196267391660225,
+      "high_band_ratio_median": 0.002916477086817585,
+      "low_over_high_relative_suppression": 10.959343401349821
+    }
+  ]
+}

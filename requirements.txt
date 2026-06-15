@@ -1,0 +1,35 @@
+# Core paper workflows
+numpy
+pandas
+scipy
+scikit-image
+scikit-learn
+pillow
+opencv-python
+matplotlib
+seaborn
+tqdm
+
+# Deep learning
+torch
+torchvision
+timm
+einops
+lpips
+pytorch-msssim
+
+# Optional utilities used by some scripts
+h5py
+hdf5storage
+lmdb
+natsort
+requests
+beautifulsoup4
+dominate
+tensorboardX
+thop
+ptflops
+
+# Note: the 30-model benchmark includes adapted third-party model code.
+# Some model folders may require additional upstream-specific dependencies.
+

@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite the associated paper."
+title: "Computational Defogging"
+authors:
+  - family-names: "Ingold"
+    given-names: "Al"
+  - family-names: "Menon"
+    given-names: "Rajesh"
+version: "paper-staging-2026-06-15"
+date-released: "2026-06-15"
+repository-code: "https://github.com/theMenonlab/defogging"
+license: "MIT"

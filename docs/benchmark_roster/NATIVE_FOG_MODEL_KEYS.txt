@@ -1,0 +1,12 @@
+dehazeformer_fog
+dcpdn_zhang_fog
+ancuti_fusion_fog
+ffanet_fog
+griddehazenet_fog
+aodnet_fog
+gcanet_fog
+msbdn_fog
+aecrnet_fog
+deanet_fog
+nafnet_bottleneck1_fog
+nafnet_no_sca_fog

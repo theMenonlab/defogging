@@ -1,0 +1,28 @@
+{
+  "model_type": "spatial_gaussian_field_v1",
+  "description": "Spatially varying synthetic fog preset. Transmission uses beta_mean times a smooth random field.",
+  "params": {
+    "name": "spatial_gaussian_field_v1",
+    "beta_mean": 2.58,
+    "beta_variation": 0.94,
+    "field_scale_px": 924.0,
+    "field_octaves": 6,
+    "field_contrast": 1.2,
+    "vertical_gradient": 0.25,
+    "horizon_bias": 0.2,
+    "airlight_r": 0.7,
+    "airlight_g": 0.7,
+    "airlight_b": 0.73,
+    "airlight_variation": 0.06,
+    "warmth_bias": 0.0,
+    "bloom_strength": 0.325,
+    "bloom_radius": 14.0,
+    "blur_radius": 0.9,
+    "blur_fog_coupling": 0.22,
+    "saturation_mix": 0.24,
+    "contrast_gamma": 0.96,
+    "noise_strength": 0.008,
+    "edge_veil_strength": 0.215,
+    "seed": 2673
+  }
+}
