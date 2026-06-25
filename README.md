@@ -2,7 +2,8 @@
 
 This repository contains the code and lightweight result files used for the computational defogging paper.
 
-Large image datasets, trained checkpoints, rendered prediction folders, and videos are intentionally excluded from Git history. Checkpoints should be attached as GitHub release assets; image datasets should be released separately, for example on Kaggle.
+Large image datasets, trained checkpoints, rendered prediction folders, and videos are released on kaggle: https://www.kaggle.com/models/alingold/fog-removal
+https://www.kaggle.com/datasets/alingold/fog-chamber
 
 ## Repository layout
 
