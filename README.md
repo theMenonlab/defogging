@@ -8,17 +8,6 @@ The project asks a practical question: can a model trained in a controlled fog c
 
 The large files are not stored in Git. Download model weights and datasets from Kaggle, then use this repository for the code and result tables.
 
-## What You Can Do
-
-| Goal | Difficulty | What you need |
-| --- | --- | --- |
-| Run defogging on your own image | Beginner | model weights |
-| Reproduce the main released-model inference examples | Beginner | model weights plus aircraft/free-flowing example images |
-| Inspect paper numbers | Beginner | files in `results/` |
-| Re-run fog-chamber NAFNet evaluation/training | Intermediate | fog-chamber paired dataset plus model weights |
-| Re-run synthetic fine-tuning | Advanced | fog-chamber checkpoint plus Mapillary Vistas |
-| Re-run the full 30-model benchmark | Advanced/HPC | third-party model source trees plus the fog-chamber dataset |
-
 ## Download Links
 
 | Asset | Link | Why it matters |
