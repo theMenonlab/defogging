@@ -21,6 +21,7 @@ source dataset for fog-chamber: https://www.kaggle.com/datasets/rhtsingh/130k-im
 - `code/dark_channel_prior/`: dark-channel-prior baseline.
 - `code/fog_statistics/`: fog statistics and paired-image structure analyses.
 - `results/`: small CSV/JSON result tables and split manifests.
+- `paper/`: main/supplement PDFs and clean LaTeX source folders.
 - `models/`: checkpoint manifest and release notes.
 - `data/`: expected dataset layout and Kaggle upload notes.
 - `docs/`: staging notes and upload checklist.

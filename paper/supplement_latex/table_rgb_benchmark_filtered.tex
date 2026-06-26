@@ -1,0 +1,44 @@
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Fog-imager restoration benchmark on the vertical-polarizer medium-fog test split. All rows appear in the bubble chart, completed 50 training epochs, and were evaluated on 552 held-out images. Train crop reports the crop size used for memory-heavy training; full indicates full $512 \times 512$ training images.}
+\label{tabS:rgb_benchmark}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+\textbf{Model} & \textbf{PSNR} & \textbf{SSIM} & \textbf{MAE} & \textbf{MSE} & \textbf{Params (M)} & \textbf{Train crop} \\
+\midrule
+NAFNet~\cite{chen2022nafnet} & 24.33 & 0.7912 & 0.05046 & 0.00714 & 29.16 & full \\
+SpecAT S2~\cite{Yao_2024_CVPR} & 23.04 & 0.7508 & 0.05644 & 0.00888 & 0.99 & full \\
+RegGAN~\cite{kong2021reggan} & 22.54 & 0.7447 & 0.05952 & 0.00917 & 11.38 & full \\
+ConvNeXt~\cite{liu2022convnext} & 22.44 & 0.7188 & 0.06216 & 0.01061 & 29.52 & full \\
+RetinexFormer~\cite{cai2023retinexformer} & 21.80 & 0.7298 & 0.06409 & 0.01013 & 1.61 & full \\
+HRNet~\cite{wang2020hrnet} & 21.67 & 0.7334 & 0.06632 & 0.01033 & 8.18 & full \\
+SpecAT S1~\cite{Yao_2024_CVPR} & 21.39 & 0.7028 & 0.06640 & 0.01046 & 0.29 & full \\
+MST++~\cite{cai2022mstpp} & 19.96 & 0.6611 & 0.07879 & 0.01356 & 0.13 & full \\
+HDNet~\cite{hu2022hdnet} & 19.77 & 0.6760 & 0.08160 & 0.01438 & 2.34 & full \\
+PADUT~\cite{li2023padut} & 18.98 & 0.6342 & 0.08981 & 0.01678 & 0.43 & full \\
+DehazeFormer~\cite{song2023dehazeformer} & 18.86 & 0.6498 & 0.08616 & 0.01652 & 0.69 & 256 \\
+Swin2SR~\cite{conde2022swin2sr} & 18.37 & 0.6505 & 0.09215 & 0.01878 & 1.00 & 256 \\
+RDN~\cite{zhang2018rdn} & 18.19 & 0.6205 & 0.09769 & 0.01966 & 2.23 & full \\
+Restormer~\cite{zamir2022restormer} & 17.63 & 0.6688 & 0.09425 & 0.02136 & 26.13 & 256 \\
+VmambaIR~\cite{shi2024vmambair} & 17.58 & 0.5743 & 0.10576 & 0.02251 & 1.35 & full \\
+MIRNet~\cite{zamir2020mirnet} & 17.13 & 0.6268 & 0.10715 & 0.02494 & 31.79 & 128 \\
+MSBDN~\cite{dong2020msbdn} & 17.00 & 0.6040 & 0.10679 & 0.02425 & 0.56 & 256 \\
+DCPDN~\cite{zhang2018dcpdn} & 16.92 & 0.6098 & 0.10707 & 0.02511 & 0.78 & 256 \\
+MPRNet~\cite{zamir2021mprnet} & 16.82 & 0.6252 & 0.10814 & 0.02515 & 15.74 & 128 \\
+SR3~\cite{saharia2023sr3} & 16.54 & 0.6195 & 0.11237 & 0.02786 & 60.66 & 128 \\
+AECRNet~\cite{wu2021aecrnet} & 16.53 & 0.5860 & 0.11107 & 0.02596 & 0.26 & 256 \\
+FFA-Net~\cite{qin2020ffa} & 16.43 & 0.6003 & 0.11324 & 0.02639 & 1.97 & 256 \\
+GCANet~\cite{chen2019gcanet} & 15.91 & 0.5564 & 0.12777 & 0.03329 & 0.12 & 256 \\
+pix2pix~\cite{isola2017pix2pix} & 15.58 & 0.6289 & 0.15443 & 0.03978 & 41.83 & full \\
+UNet++~\cite{zhou2018unetpp} & 15.05 & 0.6093 & 0.16398 & 0.04651 & 26.08 & full \\
+Ancuti fusion~\cite{ancuti2013multiscale} & 14.64 & 0.5025 & 0.14733 & 0.04322 & 0.07 & 256 \\
+DEA-Net~\cite{chen2024deanet} & 14.22 & 0.5561 & 0.14530 & 0.04396 & 0.09 & 256 \\
+GridDehazeNet~\cite{liu2019griddehazenet} & 13.87 & 0.5400 & 0.17030 & 0.05093 & 0.96 & 256 \\
+DAT~\cite{chen2023dat} & 13.08 & 0.5157 & 0.17973 & 0.05701 & 0.43 & full \\
+DRCT~\cite{hsu2024drct} & 12.70 & 0.5357 & 0.18905 & 0.06108 & 7.23 & full \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
