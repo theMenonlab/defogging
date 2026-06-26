@@ -10,6 +10,8 @@ fog-chamber dataset: https://www.kaggle.com/datasets/alingold/fog-chamber
 
 synthetic fine tuning dataset: https://www.kaggle.com/datasets/kaggleprollc/mapillary-vistas-image-data-collection
 
+source dataset for fog-chamber: https://www.kaggle.com/datasets/rhtsingh/130k-images-512x512-universal-image-embeddings
+
 ## Repository layout
 
 - `code/nafnet_finetuning/`: NAFNet training, inference, checkpoint, and evaluation utilities.
