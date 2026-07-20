@@ -126,11 +126,15 @@ def synthesize_spatial_fog(
     )
     beta_map = np.clip(beta_map, 0.03, 8.0)
     if extra_depth is not None:
-        mask = extra_depth > 0
-
+        if extra_depth.shape != (height, width):
+            raise ValueError(
+                f"extra_depth shape {extra_depth.shape} does not match image shape {(height, width)}"
+            )
+        mask = np.isfinite(extra_depth) & (extra_depth > 0)
         beta_map[mask] = preset.beta_mean * (
             1.0 + preset.paint_weight * extra_depth[mask]
-    )
+        )
+        beta_map = np.clip(beta_map, 0.03, 8.0)
     transmission = np.exp(
         -beta_map * np.clip(depth_like, 0.0, 1.0)
     )[:, :, None]

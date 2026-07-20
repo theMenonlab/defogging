@@ -187,4 +187,4 @@ def synthesize_fog(
         rng = np.random.default_rng(seed + 17)
         noise = rng.normal(0.0, preset.noise_strength, size=foggy.shape).astype(np.float32)
         foggy = np.clip(foggy + noise, 0.0, 1.0)
-   return foggy
+    return foggy

@@ -117,6 +117,7 @@ class MapillarySpatialFogDataset(Dataset):
         light_fog_prob: float,
         identity_prob: float,
         augment: bool,
+        image_root: Path,
         depth_root: Path,
     ) -> None:
         if not paths:
@@ -135,11 +136,13 @@ class MapillarySpatialFogDataset(Dataset):
         self.identity_prob = identity_prob
         self.augment = augment
         self.paint_mask = None
+        self.image_root = image_root
         self.depth_root = depth_root
         self.samples = []
 
         for img_path in self.paths:
-            depth_path = depth_root / (img_path.stem + ".npy")
+            relative_path = img_path.relative_to(image_root).with_suffix(".npy")
+            depth_path = depth_root / relative_path
 
             if not depth_path.exists():
                 raise FileNotFoundError(
@@ -157,7 +160,14 @@ class MapillarySpatialFogDataset(Dataset):
             extra = int(np.random.randint(0, 1_000_000_000))
         return stable_seed(self.paths[index], self.base_seed, extra=extra)
     def load_depth(self, depth_path: Path) -> np.ndarray:
-        return np.load(depth_path, mmap_mode = "r").astype(np.float32)
+        depth = np.load(depth_path, mmap_mode="r").astype(np.float32)
+        finite = np.isfinite(depth)
+        if not finite.any():
+            raise ValueError(f"Depth map contains no finite pixels: {depth_path}")
+        if not finite.all():
+            depth = depth.copy()
+            depth[~finite] = float(np.median(depth[finite]))
+        return depth
     def crop_rgb_depth(
         self,
         rgb: np.ndarray,
@@ -373,6 +383,15 @@ def write_manifest(path: Path, split_paths: dict[str, list[Path]]) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mapillary-root", required=True, type=Path)
+    parser.add_argument(
+        "--depth-root",
+        type=Path,
+        default=None,
+        help=(
+            "Optional cache root mirroring Mapillary, for example "
+            "DEPTH_ROOT/training/images/*.npy. Without it, each split uses its sibling depth directory."
+        ),
+    )
     parser.add_argument("--preset-json", required=True, type=Path)
     parser.add_argument("--out-dir", required=True, type=Path)
     parser.add_argument("--run-name", default="mapillary_spatial_fog_nafnet")
@@ -423,6 +442,19 @@ def main() -> None:
         val_dir = nested / "validation" / "images"
         test_dir = nested / "testing" / "images"
 
+    if args.depth_root is None:
+        depth_dirs = {
+            "train": train_dir.parent / "depth",
+            "val": val_dir.parent / "depth",
+            "test": test_dir.parent / "depth",
+        }
+    else:
+        depth_dirs = {
+            "train": args.depth_root / "training" / "images",
+            "val": args.depth_root / "validation" / "images",
+            "test": args.depth_root / "testing" / "images",
+        }
+
     split_paths = {
         "train": collect_images(train_dir),
         "val": collect_images(val_dir),
@@ -463,7 +495,8 @@ def main() -> None:
         args.light_fog_prob,
         args.identity_prob,
         True,
-        depth_root=train_dir.parent / "depth",
+        image_root=train_dir,
+        depth_root=depth_dirs["train"],
     ),
     "val": MapillarySpatialFogDataset(
         split_paths["val"],
@@ -479,7 +512,8 @@ def main() -> None:
         0.0,
         0.0,
         False,
-        depth_root=val_dir.parent / "depth",
+        image_root=val_dir,
+        depth_root=depth_dirs["val"],
     ),
     "test": MapillarySpatialFogDataset(
         split_paths["test"],
@@ -495,7 +529,8 @@ def main() -> None:
         0.0,
         0.0,
         False,
-        depth_root=test_dir.parent / "depth",
+        image_root=test_dir,
+        depth_root=depth_dirs["test"],
     ),
 }
     loaders = {
@@ -517,6 +552,8 @@ def main() -> None:
         "model_type": "residual_rgb",
         "device": str(DEVICE),
         "mapillary_root": str(mapillary_root),
+        "depth_root": str(args.depth_root) if args.depth_root is not None else None,
+        "depth_dirs": {name: str(path) for name, path in depth_dirs.items()},
         "preset_json": str(args.preset_json),
         "spatial_preset": asdict(preset),
         "airlight_jitter": args.airlight_jitter,
@@ -607,7 +644,7 @@ def main() -> None:
         logger.info("Started validation")
         val_metrics = evaluate(model, loaders["val"], criterion, "val", visuals_dir, max_visuals=8, max_batches=args.max_val_batches)
         logger.info("Finished validation")
-        logger.info(f"achieved {val_metrics["val_psnr"]} PSNR on validation set (epoch {epoch})")
+        logger.info(f"achieved {val_metrics['val_psnr']} PSNR on validation set (epoch {epoch})")
         scheduler.step()
         row = {
             "epoch": epoch + 1,
@@ -630,10 +667,10 @@ def main() -> None:
 
             best_val_psnr = float(row["val_psnr"])
             torch.save({"epoch": epoch + 1, "model_state_dict": model.state_dict(), "optimizer_state_dict": optimizer.state_dict(), "scheduler_state_dict": scheduler.state_dict(), "metrics": row, "config": run_config}, checkpoint_dir / "best_model.pt")
-            logger.info(f"Wrote out to {checkpoint_dir/"best_model.pt"}")
+            logger.info(f"Wrote out to {checkpoint_dir / 'best_model.pt'}")
         if (epoch + 1) % args.save_every == 0:
             torch.save({"epoch": epoch + 1, "model_state_dict": model.state_dict(), "optimizer_state_dict": optimizer.state_dict(), "scheduler_state_dict": scheduler.state_dict(), "metrics": row, "config": run_config}, checkpoint_dir / f"epoch_{epoch + 1:03d}.pt")
-            logger.info(f"Wrote out to {checkpoint_dir / "epoch_{epoch+1:03d}.pt"}")
+            logger.info(f"Wrote out to {checkpoint_dir / f'epoch_{epoch+1:03d}.pt'}")
     torch.save({"epoch": len(history), "model_state_dict": model.state_dict(), "optimizer_state_dict": optimizer.state_dict(), "scheduler_state_dict": scheduler.state_dict(), "metrics": history[-1], "config": run_config}, checkpoint_dir / "last_model.pt")
     logger.info("Wrote out to final_model.pt")
     best_state = torch.load(checkpoint_dir / "best_model.pt", map_location=DEVICE, weights_only=False)
