@@ -43,7 +43,7 @@ class SpatialFogPreset:
     noise_strength: float = 0.008
     edge_veil_strength: float = 0.14
     seed: int = 612
-
+    paint_weight: float = 1.0
 
 def preset_from_json(path: Path) -> SpatialFogPreset:
     with path.open("r", encoding="utf-8") as handle:
@@ -112,6 +112,7 @@ def synthesize_spatial_fog(
     clear_rgb: np.ndarray,
     preset: SpatialFogPreset,
     depth_like: np.ndarray | None = None,
+    extra_depth: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     height, width = clear_rgb.shape[:2]
     field = make_spatial_field(height, width, preset)
@@ -124,8 +125,15 @@ def synthesize_spatial_fog(
         1.0 + float(preset.beta_variation) * (2.0 * field - 1.0)
     )
     beta_map = np.clip(beta_map, 0.03, 8.0)
-    transmission = np.exp(-beta_map * np.clip(depth_like, 0.0, 1.0))[:, :, None]
+    if extra_depth is not None:
+        mask = extra_depth > 0
 
+        beta_map[mask] = preset.beta_mean * (
+            1.0 + preset.paint_weight * extra_depth[mask]
+    )
+    transmission = np.exp(
+        -beta_map * np.clip(depth_like, 0.0, 1.0)
+    )[:, :, None]
     rng = np.random.default_rng(int(preset.seed) + 202)
     color_field = np.stack(
         [
@@ -176,7 +184,7 @@ def synthesize_spatial_fog(
     if preset.noise_strength > 0:
         noise = rng.normal(0.0, float(preset.noise_strength), size=foggy.shape).astype(np.float32)
         foggy = np.clip(foggy + noise, 0.0, 1.0)
-
+ 
     return np.clip(foggy, 0.0, 1.0), field, np.clip(1.0 - transmission[:, :, 0], 0.0, 1.0)
 
 

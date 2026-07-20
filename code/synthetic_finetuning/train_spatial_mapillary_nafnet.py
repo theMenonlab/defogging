@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import logging
 import argparse
 import csv
 import hashlib
@@ -29,13 +30,19 @@ HERE = Path(__file__).resolve().parent
 CODE_DIR = HERE.parents[0] / "nafnet_finetuning"
 sys.path.insert(0, str(CODE_DIR))
 sys.path.insert(0, str(HERE))
-
+sys.path.insert(0, str())
+print(CODE_DIR)
 from nafnet_arch import NAFNet  # noqa: E402
 from spatial_fog_model import SpatialFogPreset, preset_from_json, synthesize_spatial_fog  # noqa: E402
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 VALID_SUFFIXES = {".jpg", ".jpeg", ".png"}
+
+
+# setup logging 
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename = "log.log", level=logging.INFO)
 
 
 class ResidualNAFNetRGB(nn.Module):
@@ -110,6 +117,7 @@ class MapillarySpatialFogDataset(Dataset):
         light_fog_prob: float,
         identity_prob: float,
         augment: bool,
+        depth_root: Path,
     ) -> None:
         if not paths:
             raise ValueError(f"No images for split {split}")
@@ -126,57 +134,125 @@ class MapillarySpatialFogDataset(Dataset):
         self.light_fog_prob = light_fog_prob
         self.identity_prob = identity_prob
         self.augment = augment
+        self.paint_mask = None
+        self.depth_root = depth_root
+        self.samples = []
+
+        for img_path in self.paths:
+            depth_path = depth_root / (img_path.stem + ".npy")
+
+            if not depth_path.exists():
+                raise FileNotFoundError(
+                    f"Missing depth map: {depth_path}"
+                )
+
+            self.samples.append((img_path, depth_path))
 
     def __len__(self) -> int:
         return len(self.paths)
-
+    
     def _sample_seed(self, index: int) -> int:
         extra = 0
         if self.split == "train":
             extra = int(np.random.randint(0, 1_000_000_000))
         return stable_seed(self.paths[index], self.base_seed, extra=extra)
+    def load_depth(self, depth_path: Path) -> np.ndarray:
+        return np.load(depth_path, mmap_mode = "r").astype(np.float32)
+    def crop_rgb_depth(
+        self,
+        rgb: np.ndarray,
+        depth: np.ndarray,
+        patch_size: int,
+        rng: np.random.Generator,
+        train: bool,
+    ):
+        h, w = rgb.shape[:2]
 
+        if h < patch_size or w < patch_size:
+            scale = max(patch_size / h, patch_size / w)
+
+            new_size = (
+                int(math.ceil(w * scale)),
+                int(math.ceil(h * scale)),
+            )
+
+            rgb = np.asarray(
+                Image.fromarray((rgb * 255).astype(np.uint8))
+                .resize(new_size, Image.Resampling.BICUBIC),
+                dtype=np.float32,
+            ) / 255.0
+
+            depth = np.asarray(
+                Image.fromarray(depth)
+                .resize(new_size, Image.Resampling.BILINEAR),
+                dtype=np.float32,
+            )
+
+            h, w = rgb.shape[:2]
+
+        if train:
+            top = int(rng.integers(0, h - patch_size + 1))
+            left = int(rng.integers(0, w - patch_size + 1))
+        else:
+            top = (h - patch_size) // 2
+            left = (w - patch_size) // 2
+
+        return (
+            rgb[top:top+patch_size, left:left+patch_size],
+            depth[top:top+patch_size, left:left+patch_size],
+        )
     def __getitem__(self, index: int) -> dict[str, torch.Tensor | str | float]:
-        path = self.paths[index]
+        path, depth_path = self.samples[index]
         seed = self._sample_seed(index)
         rng = np.random.default_rng(seed)
         clear_rgb = np.asarray(Image.open(path).convert("RGB"), dtype=np.float32) / 255.0
-        clear_crop = crop_rgb(clear_rgb, self.patch_size, rng, train=self.split == "train")
+        depth = self.load_depth(depth_path)
 
-        if float(rng.random()) < self.identity_prob:
-            foggy_crop = clear_crop.copy()
-            beta_mult = 0.0
-            variation_mult = 0.0
-            preset = self.preset
-        else:
-            if self.split == "train":
-                beta_mult = float(rng.uniform(self.beta_mult_min, self.beta_mult_max))
-                variation_mult = float(rng.uniform(self.variation_mult_min, self.variation_mult_max))
-                if float(rng.random()) < self.light_fog_prob:
-                    beta_mult *= float(rng.uniform(0.12, 0.45))
-                    variation_mult *= float(rng.uniform(0.25, 0.70))
-            else:
-                beta_mult = 1.0
-                variation_mult = 1.0
-            jitter = rng.uniform(-self.airlight_jitter, self.airlight_jitter, size=3).astype(np.float32)
-            preset = replace(
-                self.preset,
-                seed=int(seed % 10_000_000),
-                beta_mean=float(self.preset.beta_mean * beta_mult),
-                beta_variation=float(self.preset.beta_variation * variation_mult),
-                airlight_r=float(np.clip(self.preset.airlight_r + jitter[0], 0.0, 1.0)),
-                airlight_g=float(np.clip(self.preset.airlight_g + jitter[1], 0.0, 1.0)),
-                airlight_b=float(np.clip(self.preset.airlight_b + jitter[2], 0.0, 1.0)),
+        if depth.shape != clear_rgb.shape[:2]:
+            depth = np.asarray(
+                Image.fromarray(depth).resize(
+                    (clear_rgb.shape[1], clear_rgb.shape[0]),
+                    Image.Resampling.BILINEAR,
+                ),
+                dtype=np.float32,
             )
-            foggy_crop, _field, _fog_amount = synthesize_spatial_fog(clear_crop, preset)
+        clear_crop, depth_crop = self.crop_rgb_depth(
+            clear_rgb,
+            depth,
+            self.patch_size,
+            rng,
+            self.split == "train",
+        )
+        if self.split == "train":
+            beta_mult = float(rng.uniform(self.beta_mult_min, self.beta_mult_max))
+            variation_mult = float(rng.uniform(self.variation_mult_min, self.variation_mult_max))
+            if float(rng.random()) < self.light_fog_prob:
+                beta_mult *= float(rng.uniform(0.12, 0.45))
+                variation_mult *= float(rng.uniform(0.25, 0.70))
+        else:
+            beta_mult = 1.0
+            variation_mult = 1.0
+        jitter = rng.uniform(-self.airlight_jitter, self.airlight_jitter, size=3).astype(np.float32)
+        preset = replace(
+            self.preset,
+            seed=int(seed % 10_000_000),
+            beta_mean=float(self.preset.beta_mean * beta_mult),
+            beta_variation=float(self.preset.beta_variation * variation_mult),
+            airlight_r=float(np.clip(self.preset.airlight_r + jitter[0], 0.0, 1.0)),
+            airlight_g=float(np.clip(self.preset.airlight_g + jitter[1], 0.0, 1.0)),
+            airlight_b=float(np.clip(self.preset.airlight_b + jitter[2], 0.0, 1.0)),
+        )
+        foggy_crop, _field, _fog_amount = synthesize_spatial_fog(clear_crop, preset, extra_depth=depth_crop)
 
         if self.augment:
             if float(rng.random()) < 0.5:
                 clear_crop = np.flip(clear_crop, axis=1).copy()
                 foggy_crop = np.flip(foggy_crop, axis=1).copy()
+                depth_crop = np.flip(depth_crop, axis=1).copy()
             if float(rng.random()) < 0.15:
                 clear_crop = np.flip(clear_crop, axis=0).copy()
                 foggy_crop = np.flip(foggy_crop, axis=0).copy()
+                depth_crop = np.flip(depth_crop, axis=0).copy()
 
         return {
             "input": torch.from_numpy(np.moveaxis(foggy_crop, -1, 0)).float(),
@@ -305,9 +381,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--patch-size", type=int, default=512)
     parser.add_argument("--batch-size", type=int, default=2)
-    parser.add_argument("--learning-rate", type=float, default=1e-4)
+    parser.add_argument("--learning-rate", type=float, default=1.2e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
-    parser.add_argument("--num-workers", type=int, default=8)
+    parser.add_argument("--num-workers", type=int, default=2)
     parser.add_argument("--seed", type=int, default=613)
     parser.add_argument("--airlight-jitter", type=float, default=0.03)
     parser.add_argument("--beta-mult-min", type=float, default=1.0)
@@ -361,6 +437,8 @@ def main() -> None:
 
     run_dir = args.out_dir / args.run_name
     if run_dir.exists() and any(run_dir.iterdir()) and not args.force:
+        logger.error(f"Run dir already exists: {run_dir}")
+        logger.info("Quitting.")
         raise FileExistsError(f"Run dir exists: {run_dir}")
     checkpoint_dir = run_dir / "checkpoints"
     logs_dir = run_dir / "logs"
@@ -371,29 +449,61 @@ def main() -> None:
 
     preset = preset_from_json(args.preset_json)
     datasets = {
-        "train": MapillarySpatialFogDataset(
-            split_paths["train"],
-            "train",
-            preset,
-            args.patch_size,
-            args.seed,
-            args.airlight_jitter,
-            args.beta_mult_min,
-            args.beta_mult_max,
-            args.variation_mult_min,
-            args.variation_mult_max,
-            args.light_fog_prob,
-            args.identity_prob,
-            True,
-        ),
-        "val": MapillarySpatialFogDataset(split_paths["val"], "val", preset, args.patch_size, args.seed, args.airlight_jitter, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, False),
-        "test": MapillarySpatialFogDataset(split_paths["test"], "test", preset, args.patch_size, args.seed, args.airlight_jitter, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, False),
-    }
+    "train": MapillarySpatialFogDataset(
+        split_paths["train"],
+        "train",
+        preset,
+        args.patch_size,
+        args.seed,
+        args.airlight_jitter,
+        args.beta_mult_min,
+        args.beta_mult_max,
+        args.variation_mult_min,
+        args.variation_mult_max,
+        args.light_fog_prob,
+        args.identity_prob,
+        True,
+        depth_root=train_dir.parent / "depth",
+    ),
+    "val": MapillarySpatialFogDataset(
+        split_paths["val"],
+        "val",
+        preset,
+        args.patch_size,
+        args.seed,
+        args.airlight_jitter,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        False,
+        depth_root=val_dir.parent / "depth",
+    ),
+    "test": MapillarySpatialFogDataset(
+        split_paths["test"],
+        "test",
+        preset,
+        args.patch_size,
+        args.seed,
+        args.airlight_jitter,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        False,
+        depth_root=test_dir.parent / "depth",
+    ),
+}
     loaders = {
         "train": DataLoader(datasets["train"], batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=torch.cuda.is_available()),
         "val": DataLoader(datasets["val"], batch_size=1, shuffle=False, num_workers=max(1, min(4, args.num_workers)), pin_memory=torch.cuda.is_available()),
         "test": DataLoader(datasets["test"], batch_size=1, shuffle=False, num_workers=max(1, min(4, args.num_workers)), pin_memory=torch.cuda.is_available()),
     }
+    logger.info("Finished loading datasets")
 
     write_manifest(run_dir / "split_manifest.csv", split_paths)
     model = build_model(args).to(DEVICE)
@@ -402,7 +512,6 @@ def main() -> None:
     optimizer = AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
     scheduler = CosineAnnealingLR(optimizer, T_max=max(1, args.epochs))
     scaler = torch.cuda.amp.GradScaler(enabled=torch.cuda.is_available())
-
     run_config = {
         "model_name": "nafnet_rgb_fog",
         "model_type": "residual_rgb",
@@ -440,6 +549,7 @@ def main() -> None:
         "enc_blocks": parse_block_list(args.enc_blocks),
         "dec_blocks": parse_block_list(args.dec_blocks),
     }
+    logger.info("Finished setting up the model parameters")
     if init_info is not None:
         run_config["init_info"] = init_info
     with (run_dir / "run_config.json").open("w", encoding="utf-8") as handle:
@@ -449,7 +559,10 @@ def main() -> None:
     history: list[dict[str, float | int]] = []
     best_val_psnr = -1.0
     start = time.time()
+    logger.info("Started epochs")
     for epoch in range(args.epochs):
+        logger.info(f"Started epoch: {epoch}")   
+
         model.train()
         running = 0.0
         batches = 0
@@ -469,9 +582,32 @@ def main() -> None:
             running += float(loss.item())
             batches += 1
             progress.set_postfix({"loss": f"{loss.item():.5f}", "base": f"{loss_parts['base_loss']:.5f}"})
+        logger.info("Finished running through first epoch.")
 
         train_loss = running / max(1, batches)
+        logger.info(f"Training loss for epoch {epoch} = {train_loss}")
+        logger.info("About to call torch.save()")
+
+        try:
+            torch.save(
+                {
+                    "epoch": epoch + 1,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
+                    "config": run_config,
+                },
+                checkpoint_dir / f"epoch_{epoch+1:03d}RAW.pt",
+            )
+            logger.info("torch.save() completed")
+        except Exception:
+            logger.exception("torch.save failed")
+            raise
+        logger.info(f"wrote out to {checkpoint_dir}/epoch_{epoch+1:03d}RAW.pt")
+        logger.info("Started validation")
         val_metrics = evaluate(model, loaders["val"], criterion, "val", visuals_dir, max_visuals=8, max_batches=args.max_val_batches)
+        logger.info("Finished validation")
+        logger.info(f"achieved {val_metrics["val_psnr"]} PSNR on validation set (epoch {epoch})")
         scheduler.step()
         row = {
             "epoch": epoch + 1,
@@ -481,21 +617,29 @@ def main() -> None:
             "lr": optimizer.param_groups[0]["lr"],
         }
         history.append(row)
+        logger.info(row)
         with (logs_dir / "history.csv").open("w", encoding="utf-8", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=list(row.keys()))
             writer.writeheader()
             writer.writerows(history)
         print(json.dumps(row))
+        logger.info("Finished saving to history.csv")
+
+
         if row["val_psnr"] > best_val_psnr:
+
             best_val_psnr = float(row["val_psnr"])
             torch.save({"epoch": epoch + 1, "model_state_dict": model.state_dict(), "optimizer_state_dict": optimizer.state_dict(), "scheduler_state_dict": scheduler.state_dict(), "metrics": row, "config": run_config}, checkpoint_dir / "best_model.pt")
+            logger.info(f"Wrote out to {checkpoint_dir/"best_model.pt"}")
         if (epoch + 1) % args.save_every == 0:
             torch.save({"epoch": epoch + 1, "model_state_dict": model.state_dict(), "optimizer_state_dict": optimizer.state_dict(), "scheduler_state_dict": scheduler.state_dict(), "metrics": row, "config": run_config}, checkpoint_dir / f"epoch_{epoch + 1:03d}.pt")
-
+            logger.info(f"Wrote out to {checkpoint_dir / "epoch_{epoch+1:03d}.pt"}")
     torch.save({"epoch": len(history), "model_state_dict": model.state_dict(), "optimizer_state_dict": optimizer.state_dict(), "scheduler_state_dict": scheduler.state_dict(), "metrics": history[-1], "config": run_config}, checkpoint_dir / "last_model.pt")
+    logger.info("Wrote out to final_model.pt")
     best_state = torch.load(checkpoint_dir / "best_model.pt", map_location=DEVICE, weights_only=False)
     model.load_state_dict(best_state["model_state_dict"])
     test_metrics = evaluate(model, loaders["test"], criterion, "test", visuals_dir, max_visuals=16, max_batches=args.max_test_batches)
+    logger.info("Validated against test metrics")
     summary = {
         "run_config": run_config,
         "history": history,
@@ -507,6 +651,7 @@ def main() -> None:
     with (run_dir / "summary.json").open("w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2)
     print(json.dumps(summary, indent=2))
+    logger.info(summary)
 
 
 if __name__ == "__main__":

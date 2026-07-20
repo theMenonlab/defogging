@@ -1,3 +1,9 @@
+*.jpg
+*.png
+comparisons/
+kaggle/
+getDataset.py
+createComparison.sh
 # Python
 __pycache__/
 *.py[cod]
@@ -23,13 +29,15 @@ test_predictions/
 predictions/
 wandb/
 runs/
+*.out
+*.log
 
 # Large model files
 *.pth
 *.pt
 *.ckpt
 *.safetensors
-
+SHA256SUMS.txt
 # Large media/data artifacts
 *.mp4
 *.mov

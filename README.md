@@ -4,7 +4,7 @@ This repository contains the code, small result tables, and reproduction notes f
 
 **From Fog Chamber to Aircraft Window: Pixel-Registered Imaging and Synthetic Fine-Tuning Enable Cross-Domain Defogging**
 
-The project asks a practical question: can a model trained in a controlled fog chamber remove fog from images captured in different real-world settings? The released pipeline uses paired foggy/clear images from a display-based fog chamber, trains a NAFNet image-restoration model, then fine-tunes that model with randomized synthetic fog on clear outdoor images.
+The project asks a practical question: can a model trained in a controlled fog chamber remove fog from images captured in different real-world settings? The released pipeline uses paired foggy/clear images from a display-based fog chamber, trains a NAFNet image-restoration model, then fine-tunes that model with randomized depth-informed synthetic fog on clear outdoor images.
 
 The large files are not stored in Git. Download model weights and datasets from Kaggle, then use this repository for the code and result tables.
 
@@ -40,6 +40,7 @@ pip install -r requirements.txt
 ```
 
 If PyTorch installation fails, install the PyTorch build for your system from https://pytorch.org/get-started/locally/, then run `pip install -r requirements.txt` again.
+The PyTorch version given in the current requirements.txt works on a Nvidia GTX-1070 system.
 
 ### 2. Put the downloaded model files in one folder
 
@@ -114,6 +115,8 @@ ground_truth_matched/cars/image0390.jpg
 
 The paper split uses every 10th image within each sorted category as the held-out test set. The matched fog-chamber set contains 5,495 paired images across six categories, with 552 held out for testing.
 
+For the synthetic fog training, the depths should be precomputed as .npy files. A "precomputeDepth.py" file is included to facilitate this process.
+
 ## Reproducing Paper Outputs
 
 The small result tables are under `results/`. They are safe to keep in Git; the folder is about 5.8 MB even though it has more than 100 files.
@@ -152,6 +155,8 @@ Core code lives in `code/nafnet_finetuning/`.
 Core code lives in `code/synthetic_finetuning/`.
 
 The paper-current synthetic branch starts from the fog-chamber NAFNet checkpoint and fine-tunes on Mapillary Vistas clear images with spatial synthetic fog generated on the fly. This is a GPU workflow.
+
+However, while the synthetic fog is generated on the fly, the depth maps of the images, as precomputed by ZoeDepth, need to be precomputed. This dramatically cuts down on the training time. Precompute this with "code/synthetic_finetuning/precomputeDepth.py". 
 
 ### Full 30-model benchmark
 
