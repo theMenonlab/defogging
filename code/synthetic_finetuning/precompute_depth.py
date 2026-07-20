@@ -1,30 +1,20 @@
-# this file loops through the mapillary dataset and runs a depth estimation model on all the images.
-# This means that when training the model, it is far faster as the depth has already been precomputed for all the images.
-# Inputs:
-# Input the mapillary vistas dataset for training. It uses transformers.pipeline to get a depth estimation model
-# (Intel/zoedepth-nyu-kitti) from HF/
-# and runs it on all the images.
-# Outputs:
-# Outputs all of the depth map image files to a folder. each depth file is a .npy depth map that is the same name as 
-# the original jpg.
-# WARNING:
-# THE BATCH-SIZE OPTION IS BROKEN! DO NOT PASS A BATCH SIZE!!!!
-# call it like:
-#python precompute_depth.py \
-#    --input /path/to/mapillary \
-#    --output /path/to/depth \
-#
-#   --workers 8
-# set workers close to core count
 #!/usr/bin/env python3
-#!/usr/bin/env python3
+"""Precompute a resumable ZoeDepth cache for an image tree.
+
+The output tree mirrors the input tree and replaces image suffixes with
+``.npy``. CUDA inference defaults to float16 to reproduce the completed depth
+fine-tuning run; any non-finite pixels are repaired before the cache is saved.
+"""
+
+from __future__ import annotations
 
 import argparse
 from pathlib import Path
+
 import numpy as np
 import torch
 from PIL import Image
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 
@@ -33,81 +23,126 @@ VALID_EXTS = {".jpg", ".jpeg", ".png"}
 
 
 class ImageDataset(Dataset):
-    def __init__(self, root: Path):
-        self.root = Path(root)
-        self.files = [
-            p for p in self.root.rglob("*")
-            if p.suffix.lower() in VALID_EXTS
-        ]
+    def __init__(
+        self,
+        input_root: Path,
+        output_root: Path,
+        overwrite: bool = False,
+        max_images: int | None = None,
+    ) -> None:
+        self.input_root = input_root
+        self.output_root = output_root
+        candidates = sorted(
+            path
+            for path in input_root.rglob("*")
+            if path.is_file() and path.suffix.lower() in VALID_EXTS
+        )
+        if not overwrite:
+            candidates = [path for path in candidates if not self.output_path(path).is_file()]
+        self.files = candidates[:max_images] if max_images is not None else candidates
 
-    def __len__(self):
+    def output_path(self, image_path: Path) -> Path:
+        relative = image_path.relative_to(self.input_root)
+        return self.output_root / relative.with_suffix(".npy")
+
+    def __len__(self) -> int:
         return len(self.files)
 
-    def __getitem__(self, i):
-        path = self.files[i]
-        img = Image.open(path).convert("RGB")
-        return img, str(path)
+    def __getitem__(self, index: int) -> tuple[Image.Image, str]:
+        path = self.files[index]
+        with Image.open(path) as image:
+            rgb = image.convert("RGB").copy()
+        return rgb, str(path)
 
 
-def collate(batch):
-    imgs, paths = zip(*batch)
-    return list(imgs), list(paths)
+def collate_one(batch: list[tuple[Image.Image, str]]) -> tuple[Image.Image, Path]:
+    if len(batch) != 1:
+        raise ValueError("ZoeDepth preprocessing requires batch size 1 because image sizes vary")
+    image, path = batch[0]
+    return image, Path(path)
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--input", type=Path, required=True)
-    ap.add_argument("--output", type=Path, required=True)
-    ap.add_argument("--batch-size", type=int, default=1)
-    ap.add_argument("--workers", type=int, default=8)
-    args = ap.parse_args()
+def sanitize_depth(depth: np.ndarray) -> np.ndarray:
+    depth = np.asarray(depth, dtype=np.float32)
+    finite = np.isfinite(depth)
+    if not finite.any():
+        raise ValueError("ZoeDepth returned no finite pixels")
+    if not finite.all():
+        depth = depth.copy()
+        depth[~finite] = float(np.median(depth[finite]))
+    if np.any(depth <= 0):
+        positive = depth[depth > 0]
+        if not positive.size:
+            raise ValueError("ZoeDepth returned no positive pixels")
+        depth = depth.copy()
+        depth[depth <= 0] = float(np.min(positive))
+    return depth
 
-    args.output.mkdir(parents=True, exist_ok=True)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    torch.backends.cudnn.benchmark = True
-
-    processor = AutoImageProcessor.from_pretrained(
-        "Intel/zoedepth-nyu-kitti"
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", type=Path, required=True, help="Image directory to scan recursively")
+    parser.add_argument("--output", type=Path, required=True, help="Depth-cache root mirroring --input")
+    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--max-images", type=int, default=None, help="Optional smoke-test limit")
+    parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--model", default="Intel/zoedepth-nyu-kitti")
+    parser.add_argument(
+        "--precision",
+        choices=["float16", "float32"],
+        default="float16",
+        help="Use float16 to reproduce the completed run; float32 changes the metric-depth scale",
     )
+    return parser.parse_args()
 
+
+def main() -> None:
+    args = parse_args()
+    if args.workers < 0:
+        raise ValueError("--workers must be >= 0")
+    args.output.mkdir(parents=True, exist_ok=True)
+    dataset = ImageDataset(args.input, args.output, args.overwrite, args.max_images)
+    print(f"remaining_images={len(dataset)} input={args.input} output={args.output}", flush=True)
+    if not dataset:
+        return
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if device.type == "cuda":
+        torch.backends.cudnn.benchmark = True
+    use_float16 = args.precision == "float16" and device.type == "cuda"
+    model_dtype = torch.float16 if use_float16 else torch.float32
+    processor = AutoImageProcessor.from_pretrained(args.model)
     model = AutoModelForDepthEstimation.from_pretrained(
-        "Intel/zoedepth-nyu-kitti",
-        torch_dtype=torch.float16 if device == "cuda" else torch.float32,
-    ).to(device)
-
-    model.eval()
-
-    ds = ImageDataset(args.input)
-
+        args.model,
+        torch_dtype=model_dtype,
+    ).to(device).eval()
     loader = DataLoader(
-        ds,
-        batch_size=args.batch_size,
+        dataset,
+        batch_size=1,
         shuffle=False,
         num_workers=args.workers,
-        pin_memory=True,
-        persistent_workers=True,
-        collate_fn=collate,
+        pin_memory=device.type == "cuda",
+        persistent_workers=args.workers > 0,
+        collate_fn=collate_one,
     )
 
     with torch.inference_mode():
-        for imgs, paths in tqdm(loader, desc="depth"):
-            inputs = processor(images=imgs, return_tensors="pt")
-            inputs = {k: v.to(device, non_blocking=True) for k, v in inputs.items()}
-
-            with torch.autocast("cuda", enabled=device == "cuda", dtype=torch.float16):
-                outputs = model(**inputs)
-                depth = outputs.predicted_depth
-
-            depth = depth.detach().cpu().numpy().astype(np.float16)
-
-            for d, p in zip(depth, paths):
-                p = Path(p)
-                rel = p.relative_to(args.input)
-                out_path = args.output / rel.with_suffix(".npy")
-                out_path.parent.mkdir(parents=True, exist_ok=True)
-                np.save(out_path, d)
+        for image, image_path in tqdm(loader, desc="ZoeDepth"):
+            inputs = processor(images=[image], return_tensors="pt")
+            inputs = {key: value.to(device, non_blocking=True) for key, value in inputs.items()}
+            with torch.autocast(
+                device_type=device.type,
+                enabled=use_float16,
+                dtype=torch.float16,
+            ):
+                depth = model(**inputs).predicted_depth[0]
+            depth_array = sanitize_depth(depth.detach().cpu().numpy())
+            output_path = dataset.output_path(image_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = output_path.with_suffix(".npy.partial")
+            with temporary.open("wb") as handle:
+                np.save(handle, depth_array.astype(np.float16))
+            temporary.replace(output_path)
 
 
 if __name__ == "__main__":

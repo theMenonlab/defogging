@@ -115,7 +115,9 @@ ground_truth_matched/cars/image0390.jpg
 
 The paper split uses every 10th image within each sorted category as the held-out test set. The matched fog-chamber set contains 5,495 paired images across six categories, with 552 held out for testing.
 
-For the synthetic fog training, the depths should be precomputed as .npy files. A "precomputeDepth.py" file is included to facilitate this process.
+For synthetic fog training, precompute the ZoeDepth maps as `.npy` files with
+`code/synthetic_finetuning/precompute_depth.py`. The cache preserves the image
+directory structure so duplicate image stems cannot overwrite one another.
 
 ## Reproducing Paper Outputs
 
@@ -156,7 +158,27 @@ Core code lives in `code/synthetic_finetuning/`.
 
 The paper-current synthetic branch starts from the fog-chamber NAFNet checkpoint and fine-tunes on Mapillary Vistas clear images with spatial synthetic fog generated on the fly. This is a GPU workflow.
 
-However, while the synthetic fog is generated on the fly, the depth maps of the images, as precomputed by ZoeDepth, need to be precomputed. This dramatically cuts down on the training time. Precompute this with "code/synthetic_finetuning/precomputeDepth.py". 
+The fog is generated on the fly, while ZoeDepth maps are cached once before
+training. For a Mapillary root containing `training`, `validation`, and
+`testing`, run:
+
+```bash
+python code/synthetic_finetuning/precompute_depth.py \
+  --input "/path/to/Mapillary Vistas" \
+  --output /path/to/mapillary_depth \
+  --workers 4
+
+python code/synthetic_finetuning/train_spatial_mapillary_nafnet.py \
+  --mapillary-root "/path/to/Mapillary Vistas" \
+  --depth-root /path/to/mapillary_depth \
+  --preset-json code/synthetic_finetuning/spatial_fog_preset.json \
+  --out-dir outputs \
+  --init-checkpoint /path/to/fog_chamber_checkpoint.pth \
+  --strict-load
+```
+
+Depth preprocessing is resumable and skips existing outputs. Use
+`--max-images 1` for a local smoke test.
 
 ### Full 30-model benchmark
 
