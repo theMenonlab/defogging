@@ -12,7 +12,7 @@ The large files are not stored in Git. Download model weights and datasets from 
 
 | Asset | Link | Why it matters |
 | --- | --- | --- |
-| Model weights | https://www.kaggle.com/datasets/themenonlab/computational-defogging-model-weights | Released fog-chamber, randomized-synthetic, and experimental NAFNet checkpoints |
+| Model weights | https://www.kaggle.com/models/alingold/fog-removal | Released fog-chamber, randomized-synthetic, and experimental NAFNet checkpoints |
 | Fog-chamber dataset | https://www.kaggle.com/datasets/alingold/fog-chamber | Paired foggy/clear images used for the controlled restoration task |
 | Synthetic fine-tuning source images | https://www.kaggle.com/datasets/kaggleprollc/mapillary-vistas-image-data-collection | Clear outdoor images used to synthesize randomized fog during fine-tuning |
 | Source image archive for the chamber display | https://www.kaggle.com/datasets/rhtsingh/130k-images-512x512-universal-image-embeddings | Original 512 x 512 category images displayed in the fog chamber |
@@ -169,9 +169,12 @@ and are not part of the final PNAS paper:
   training on chamber pairs and randomized synthetic fog, sensitivity results,
   code, and a paper variant.
 
-Their large NAFNet checkpoints are hosted in the Kaggle model-weights dataset
-rather than Git. Each experiment README identifies the matching filename and
+Their large NAFNet checkpoints are hosted as Kaggle Model variations rather
+than in Git. Each experiment README identifies the matching filename and
 documents limitations.
+
+- Depth-dependent checkpoint: https://www.kaggle.com/models/alingold/fog-removal/PyTorch/depth_dependent_synthetic_nafnet
+- Mixed-training checkpoint: https://www.kaggle.com/models/alingold/fog-removal/PyTorch/mixed_chamber_synthetic_nafnet
 
 ### Full 30-model benchmark
 

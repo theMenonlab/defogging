@@ -15,7 +15,7 @@ Core files:
 
 Required inputs:
 
-- fog-chamber NAFNet checkpoint from https://www.kaggle.com/datasets/themenonlab/computational-defogging-model-weights
+- fog-chamber NAFNet checkpoint from https://www.kaggle.com/models/alingold/fog-removal
 - Mapillary Vistas clear images from https://www.kaggle.com/datasets/kaggleprollc/mapillary-vistas-image-data-collection
 - optional public paired-haze datasets for transfer checks
 - optional aircraft-window and free-flowing fog examples for qualitative inference
