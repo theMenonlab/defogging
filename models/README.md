@@ -8,6 +8,13 @@ Expected checkpoint files:
 
 - `fog_chamber_nafnet_model_state_20260615.pth`
 - `synthetic_finetuned_nafnet_model_state_20260615.pt`
+- `nafnet_depth_dependent_synthetic_20260722.pth` (experimental)
+- `nafnet_mixed_chamber_synthetic_current_ratio_20260726.pth` (experimental)
+
+The experimental checkpoints have their own Kaggle variations:
+
+- https://www.kaggle.com/models/alingold/fog-removal/PyTorch/depth_dependent_synthetic_nafnet
+- https://www.kaggle.com/models/alingold/fog-removal/PyTorch/mixed_chamber_synthetic_nafnet
 
 Small metadata files in this folder are safe to track:
 

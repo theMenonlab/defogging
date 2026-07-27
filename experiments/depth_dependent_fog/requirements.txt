@@ -1,0 +1,8 @@
+numpy
+pillow
+scikit-image
+torch
+torchvision
+tqdm
+transformers==4.46.3
+safetensors>=0.4,<0.6

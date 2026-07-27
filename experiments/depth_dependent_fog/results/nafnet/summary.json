@@ -1,0 +1,21 @@
+{
+  "model_key": "nafnet_fc",
+  "fog_mode": "andrew_depth",
+  "optimizer_steps": 2600,
+  "micro_batches": 5200,
+  "mean_train_loss": 0.0650024567697955,
+  "validation": {
+    "batches": 300,
+    "mean_l1": 0.08595418771107992,
+    "mean_psnr": 19.645361493729965,
+    "mean_ssim": 0.7925539869070053
+  },
+  "test": {
+    "batches": 500,
+    "mean_l1": 0.0831450132355094,
+    "mean_psnr": 19.862522269156212,
+    "mean_ssim": 0.8043658871650696
+  },
+  "elapsed_seconds": 778.6226766109467,
+  "timestamp": "2026-07-21T23:42:51.338991"
+}

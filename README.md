@@ -4,7 +4,7 @@ This repository contains the code, small result tables, and reproduction notes f
 
 **From Fog Chamber to Aircraft Window: Pixel-Registered Imaging and Synthetic Fine-Tuning Enable Cross-Domain Defogging**
 
-The project asks a practical question: can a model trained in a controlled fog chamber remove fog from images captured in different real-world settings? The released pipeline uses paired foggy/clear images from a display-based fog chamber, trains a NAFNet image-restoration model, then fine-tunes that model with randomized depth-informed synthetic fog on clear outdoor images.
+The project asks a practical question: can a model trained in a controlled fog chamber remove fog from images captured in different real-world settings? The released pipeline uses paired foggy/clear images from a display-based fog chamber, trains a NAFNet image-restoration model, then fine-tunes that model with randomized synthetic fog on clear outdoor images.
 
 The large files are not stored in Git. Download model weights and datasets from Kaggle, then use this repository for the code and result tables.
 
@@ -12,7 +12,7 @@ The large files are not stored in Git. Download model weights and datasets from 
 
 | Asset | Link | Why it matters |
 | --- | --- | --- |
-| Model weights | https://www.kaggle.com/models/alingold/fog-removal | Released fog-chamber and synthetic fine-tuned NAFNet checkpoints |
+| Model weights | https://www.kaggle.com/models/alingold/fog-removal | Released fog-chamber, randomized-synthetic, and experimental NAFNet checkpoints |
 | Fog-chamber dataset | https://www.kaggle.com/datasets/alingold/fog-chamber | Paired foggy/clear images used for the controlled restoration task |
 | Synthetic fine-tuning source images | https://www.kaggle.com/datasets/kaggleprollc/mapillary-vistas-image-data-collection | Clear outdoor images used to synthesize randomized fog during fine-tuning |
 | Source image archive for the chamber display | https://www.kaggle.com/datasets/rhtsingh/130k-images-512x512-universal-image-embeddings | Original 512 x 512 category images displayed in the fog chamber |
@@ -23,6 +23,10 @@ The model-weight Kaggle page should contain:
 - `synthetic_finetuned_nafnet_model_state_20260615.pt`
 - `run_config_fog_chamber_nafnet.json`
 - `run_config_synthetic_finetuned_nafnet.json`
+- `nafnet_depth_dependent_synthetic_20260722.pth`
+- `run_config_depth_dependent_synthetic_nafnet.json`
+- `nafnet_mixed_chamber_synthetic_current_ratio_20260726.pth`
+- `run_config_mixed_chamber_synthetic_current_ratio_nafnet.json`
 - `SHA256SUMS.txt`
 - `checkpoints_manifest.csv`
 
@@ -40,7 +44,6 @@ pip install -r requirements.txt
 ```
 
 If PyTorch installation fails, install the PyTorch build for your system from https://pytorch.org/get-started/locally/, then run `pip install -r requirements.txt` again.
-The PyTorch version given in the current requirements.txt works on a Nvidia GTX-1070 system.
 
 ### 2. Put the downloaded model files in one folder
 
@@ -115,10 +118,6 @@ ground_truth_matched/cars/image0390.jpg
 
 The paper split uses every 10th image within each sorted category as the held-out test set. The matched fog-chamber set contains 5,495 paired images across six categories, with 552 held out for testing.
 
-For synthetic fog training, precompute the ZoeDepth maps as `.npy` files with
-`code/synthetic_finetuning/precompute_depth.py`. The cache preserves the image
-directory structure so duplicate image stems cannot overwrite one another.
-
 ## Reproducing Paper Outputs
 
 The small result tables are under `results/`. They are safe to keep in Git; the folder is about 5.8 MB even though it has more than 100 files.
@@ -158,27 +157,24 @@ Core code lives in `code/synthetic_finetuning/`.
 
 The paper-current synthetic branch starts from the fog-chamber NAFNet checkpoint and fine-tunes on Mapillary Vistas clear images with spatial synthetic fog generated on the fly. This is a GPU workflow.
 
-The fog is generated on the fly, while ZoeDepth maps are cached once before
-training. For a Mapillary root containing `training`, `validation`, and
-`testing`, run:
+### Experimental extensions
 
-```bash
-python code/synthetic_finetuning/precompute_depth.py \
-  --input "/path/to/Mapillary Vistas" \
-  --output /path/to/mapillary_depth \
-  --workers 4
+The repository root remains the randomized-synthetic workflow used by the
+submission. Two later research extensions are isolated under `experiments/`
+and are not part of the final PNAS paper:
 
-python code/synthetic_finetuning/train_spatial_mapillary_nafnet.py \
-  --mapillary-root "/path/to/Mapillary Vistas" \
-  --depth-root /path/to/mapillary_depth \
-  --preset-json code/synthetic_finetuning/spatial_fog_preset.json \
-  --out-dir outputs \
-  --init-checkpoint /path/to/fog_chamber_checkpoint.pth \
-  --strict-load
-```
+- `experiments/depth_dependent_fog/`: ZoeDepth-dependent synthetic fog,
+  matched 30-model results, code, and a conservative paper variant.
+- `experiments/mixed_chamber_synthetic_training/`: deterministic joint
+  training on chamber pairs and randomized synthetic fog, sensitivity results,
+  code, and a paper variant.
 
-Depth preprocessing is resumable and skips existing outputs. Use
-`--max-images 1` for a local smoke test.
+Their large NAFNet checkpoints are hosted as Kaggle Model variations rather
+than in Git. Each experiment README identifies the matching filename and
+documents limitations.
+
+- Depth-dependent checkpoint: https://www.kaggle.com/models/alingold/fog-removal/PyTorch/depth_dependent_synthetic_nafnet
+- Mixed-training checkpoint: https://www.kaggle.com/models/alingold/fog-removal/PyTorch/mixed_chamber_synthetic_nafnet
 
 ### Full 30-model benchmark
 
@@ -199,6 +195,7 @@ The 30-model benchmark requires the third-party model source trees used by the `
 - `models/`: checkpoint manifests, checksums, and model config JSONs.
 - `data/`: expected dataset layout and Kaggle notes.
 - `docs/`: release upload and audit notes.
+- `experiments/`: separately documented post-submission research extensions.
 
 ## Troubleshooting
 
