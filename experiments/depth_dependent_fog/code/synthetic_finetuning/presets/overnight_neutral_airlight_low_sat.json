@@ -1,0 +1,28 @@
+{
+  "model_type": "spatial_gaussian_field_v1",
+  "description": "Overnight variant overnight_neutral_airlight_low_sat",
+  "params": {
+    "name": "overnight_neutral_airlight_low_sat",
+    "beta_mean": 2.58,
+    "beta_variation": 0.94,
+    "field_scale_px": 924.0,
+    "field_octaves": 6,
+    "field_contrast": 1.2,
+    "vertical_gradient": 0.25,
+    "horizon_bias": 0.2,
+    "airlight_r": 0.705,
+    "airlight_g": 0.705,
+    "airlight_b": 0.715,
+    "airlight_variation": 0.035,
+    "warmth_bias": 0.0,
+    "bloom_strength": 0.22,
+    "bloom_radius": 14.0,
+    "blur_radius": 0.9,
+    "blur_fog_coupling": 0.22,
+    "saturation_mix": 0.16,
+    "contrast_gamma": 0.96,
+    "noise_strength": 0.008,
+    "edge_veil_strength": 0.215,
+    "seed": 2673
+  }
+}

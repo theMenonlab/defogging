@@ -1,0 +1,31 @@
+{
+  "run_name": "current_ratio",
+  "model_key": "nafnet_fc",
+  "optimizer_steps": 249750,
+  "real_optimizer_steps": 247150,
+  "synthetic_optimizer_steps": 2600,
+  "synthetic_to_real_update_ratio": 0.010519927169734978,
+  "synthetic_fraction_of_all_updates": 0.01041041041041041,
+  "mean_real_train_l1": 0.049633777374504376,
+  "mean_synthetic_train_loss": 0.10087473570951261,
+  "chamber_holdout": {
+    "samples": 552,
+    "mean_l1": 0.049868309015806335,
+    "mean_psnr": 24.40835592447175,
+    "mean_ssim": 0.793586553249886
+  },
+  "synthetic_validation": {
+    "batches": 300,
+    "mean_l1": 0.085131759904325,
+    "mean_psnr": 19.394577086168315,
+    "mean_ssim": 0.784404114484787
+  },
+  "synthetic_test": {
+    "batches": 500,
+    "mean_l1": 0.08354117590561509,
+    "mean_psnr": 19.624020338600168,
+    "mean_ssim": 0.7909155180454254
+  },
+  "elapsed_seconds": 37405.35205554962,
+  "timestamp": "2026-07-26T07:25:47.136689"
+}

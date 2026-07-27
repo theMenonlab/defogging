@@ -1,0 +1,31 @@
+{
+  "run_name": "synthetic_5x",
+  "model_key": "nafnet_fc",
+  "optimizer_steps": 260150,
+  "real_optimizer_steps": 247150,
+  "synthetic_optimizer_steps": 13000,
+  "synthetic_to_real_update_ratio": 0.05259963584867489,
+  "synthetic_fraction_of_all_updates": 0.049971170478570054,
+  "mean_real_train_l1": 0.04924463800659383,
+  "mean_synthetic_train_loss": 0.06679319264091471,
+  "chamber_holdout": {
+    "samples": 552,
+    "mean_l1": 0.04968664115564762,
+    "mean_psnr": 24.440262414760216,
+    "mean_ssim": 0.794270011069982
+  },
+  "synthetic_validation": {
+    "batches": 300,
+    "mean_l1": 0.06234612441000839,
+    "mean_psnr": 21.866406364021692,
+    "mean_ssim": 0.8362193850676218
+  },
+  "synthetic_test": {
+    "batches": 500,
+    "mean_l1": 0.0629109851680696,
+    "mean_psnr": 21.894153512111828,
+    "mean_ssim": 0.8406718329191208
+  },
+  "elapsed_seconds": 41125.036504268646,
+  "timestamp": "2026-07-26T08:27:59.267082"
+}
